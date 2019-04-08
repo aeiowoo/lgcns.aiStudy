@@ -2,22 +2,26 @@ package com.lgcns.aistudy;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.graphics.Camera;
+import android.hardware.Camera;
 import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.Toast;
+
+import com.google.android.gms.vision.face.FaceDetector;
 
 public class MainActivity extends AppCompatActivity {
 
     private final int PERMISSION_CAMERA = 1;
 
     private CameraView cameraView;
+    private Button cameraChangeBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +46,15 @@ public class MainActivity extends AppCompatActivity {
         } else {
             setCamera();
         }
+
+        cameraChangeBtn = findViewById(R.id.button);
+        cameraChangeBtn.setOnClickListener(new Button.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                // TODO : click event
+            }
+        });
     }
 
     @Override
@@ -68,6 +81,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setCamera() {
-        cameraView = (CameraView)(findViewById(R.id.cameraPreview));
+        cameraView = findViewById(R.id.cameraPreview);
     }
 }

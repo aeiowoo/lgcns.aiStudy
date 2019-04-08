@@ -6,10 +6,10 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <SurfaceView
+    <com.lgcns.aistudy.CameraView
         android:id="@+id/cameraPreview"
-        android:layout_width="363dp"
-        android:layout_height="640dp"
+        android:layout_width="304dp"
+        android:layout_height="509dp"
         android:layout_marginStart="25dp"
         android:layout_marginLeft="25dp"
         android:layout_marginTop="45dp"
@@ -20,4 +20,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Button"
+        tools:layout_editor_absoluteX="161dp"
+        tools:layout_editor_absoluteY="37dp" />
 </android.support.constraint.ConstraintLayout>

@@ -6,16 +6,15 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,9 +42,10 @@ public class MainActivity extends AppCompatActivity {
     private CameraView cameraView;
     private Button cameraChangeBtn;
     private Button faceDetectBtn;
+    private Button imgFaceDetectBtn;
     private ImageView captureImageView;
 
-    private Bitmap captureImageBitmap;
+    private Bitmap imageBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +104,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 captureCameraImage();
+            }
+        });
+
+        imgFaceDetectBtn = findViewById(R.id.imgFaceDetectBtn);
+        imgFaceDetectBtn.setOnClickListener(new Button.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+
+                //findViewById(R.id.testImg).setVisibility(View.VISIBLE);
+
+                Drawable drawable = getResources().getDrawable(R.drawable.test);
+                imageBitmap = ((BitmapDrawable)drawable).getBitmap();
+
+                detectFace();
             }
         });
     }
@@ -169,15 +184,16 @@ public class MainActivity extends AppCompatActivity {
                 //byte array를 bitmap으로 변환
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                captureImageBitmap = BitmapFactory.decodeByteArray( data, 0, data.length, options);
+                imageBitmap = BitmapFactory.decodeByteArray( data, 0, data.length, options);
 
                 //이미지를 디바이스 방향으로 회전
 //                Matrix matrix = new Matrix();
-//                matrix.postRotate(90);
-//                captureImageBitmap = Bitmap.createBitmap(captureImageBitmap, 0, 0, w, h, matrix, true);
+//                matrix.postRotate(270);
+//                imageBitmap = Bitmap.createBitmap(imageBitmap, 0, 0, w, h, matrix, true);
 
-                //captureImageView.setImageBitmap(captureImageBitmap);
+                //captureImageView.setImageBitmap(imageBitmap);
                 detectFace();
+                captureImageView.setRotationX(90);
             }
         };
 
@@ -197,12 +213,12 @@ public class MainActivity extends AppCompatActivity {
         Pnt.setStrokeWidth(5);
         Pnt.setStyle(Paint.Style.STROKE);
 
-        Log.d("[AI STUDY]", "processDetectedFace captureImageBitmap.getWidth() : " + captureImageBitmap.getWidth());
-        Log.d("[AI STUDY]", "processDetectedFace captureImageBitmap.getHeight() : " + captureImageBitmap.getHeight());
+        Log.d("[AI STUDY]", "processDetectedFace imageBitmap.getWidth() : " + imageBitmap.getWidth());
+        Log.d("[AI STUDY]", "processDetectedFace imageBitmap.getHeight() : " + imageBitmap.getHeight());
 
-        Bitmap tempBitmap = Bitmap.createBitmap(captureImageBitmap.getWidth(), captureImageBitmap.getHeight(), Bitmap.Config.RGB_565);
+        Bitmap tempBitmap = Bitmap.createBitmap(imageBitmap.getWidth(), imageBitmap.getHeight(), Bitmap.Config.RGB_565);
         Canvas tempCanvas = new Canvas(tempBitmap);
-        tempCanvas.drawBitmap(captureImageBitmap, 0, 0, null);
+        tempCanvas.drawBitmap(imageBitmap, 0, 0, null);
 
         FaceDetector faceDetector = new FaceDetector.Builder(getApplicationContext())
                 .setTrackingEnabled(true)
@@ -214,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Frame frame = new Frame.Builder()
-                .setBitmap(captureImageBitmap)
+                .setBitmap(imageBitmap)
                 .build();
         SparseArray<Face> faces = faceDetector.detect(frame);
 

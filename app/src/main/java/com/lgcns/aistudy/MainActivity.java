@@ -6,8 +6,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.YuvImage;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
@@ -30,22 +33,28 @@ import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.vision.face.Landmark;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
     private final int PERMISSION_CAMERA = 1;
 
-    private final int CAMERA_FACING_FRONT = 1;
-    private final int CAMERA_FACING_BACK = 0;
-
     private CameraView cameraView;
-    private Button cameraChangeBtn;
-    private Button faceDetectBtn;
-    private Button imgFaceDetectBtn;
     private ImageView captureImageView;
 
     private Bitmap imageBitmap;
+    private Paint paint;
+    private static final int COLOR_CHOICES[] = {
+            Color.BLUE,
+            Color.CYAN,
+            Color.GREEN,
+            Color.MAGENTA,
+            Color.RED,
+            Color.WHITE,
+            Color.YELLOW
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
         if(checkIsCameraAvailable()) {
             setCamera();
         }
+
+        paint = new Paint();
     }
 
     @Override
@@ -88,46 +99,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void setCustomContentViews() {
         captureImageView = findViewById(R.id.captureImageView);
-
-        cameraChangeBtn = findViewById(R.id.cameraChangeBtn);
-        cameraChangeBtn.setOnClickListener(new Button.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                changeCamera();
-            }
-        });
-
-        faceDetectBtn = findViewById(R.id.faceDetectBtn);
-        faceDetectBtn.setOnClickListener(new Button.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                captureCameraImage();
-            }
-        });
-
-        imgFaceDetectBtn = findViewById(R.id.imgFaceDetectBtn);
-        imgFaceDetectBtn.setOnClickListener(new Button.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-
-                //findViewById(R.id.testImg).setVisibility(View.VISIBLE);
-
-                Drawable drawable = getResources().getDrawable(R.drawable.test);
-                imageBitmap = ((BitmapDrawable)drawable).getBitmap();
-
-                detectFace();
-            }
-        });
     }
 
     private boolean checkIsCameraAvailable() {
 
         boolean isCameraAvailable = false;
 
-        // MOS 이상 권한 체크
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
             int cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
@@ -146,58 +123,29 @@ public class MainActivity extends AppCompatActivity {
 
     private void setCamera() {
         cameraView = findViewById(R.id.cameraPreview);
-    }
 
-    private void changeCamera() {
+        cameraView.getCamera().setPreviewCallback(new Camera.PreviewCallback() {
+            @Override
+            public void onPreviewFrame(byte[] data, Camera camera) {
+                Log.d("[AI STUDY]", "onPreviewFrame!");
 
-//        cameraView.getCamera().stopPreview();
-//        cameraView.getCamera().release();
-//
-//        cameraView.setCameraFacing(cameraView.getCameraFacing() == CAMERA_FACING_FRONT ? CAMERA_FACING_BACK : CAMERA_FACING_FRONT);
-//        cameraView = findViewById(R.id.cameraPreview);
-//
-//        cameraView.startCameraPreview();
-    }
+                Log.d("[AI STUDY]", "onPreviewFrame-data.length : " + data.length);
 
-    private void captureCameraImage() {
+                Camera.Parameters parameters = camera.getParameters();
+                int width = parameters.getPreviewSize().width;
+                int height = parameters.getPreviewSize().height;
 
-        Camera.ShutterCallback shutterCallback = new Camera.ShutterCallback() {
-            public void onShutter() {
-            }
-        };
+                YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), width, height, null);
 
-        Camera.PictureCallback rawCallback = new Camera.PictureCallback() {
-            public void onPictureTaken(byte[] data, Camera camera) {
-            }
-        };
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                yuv.compressToJpeg(new Rect(0, 0, width, height), 50, out);
 
-        Camera.PictureCallback jpegCallback = new Camera.PictureCallback() {
-            public void onPictureTaken(byte[] data, Camera camera) {
-                //이미지의 너비와 높이 결정
-                int w = camera.getParameters().getPictureSize().width;
-                int h = camera.getParameters().getPictureSize().height;
-                //int orientation = calculatePreviewOrientation(mCameraInfo, mDisplayOrientation);
+                byte[] bytes = out.toByteArray();
+                imageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 
-                Log.d("[AI STUDY]", "onPictureTaken w : " + w);
-                Log.d("[AI STUDY]", "onPictureTaken h : " + h);
-
-                //byte array를 bitmap으로 변환
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                imageBitmap = BitmapFactory.decodeByteArray( data, 0, data.length, options);
-
-                //이미지를 디바이스 방향으로 회전
-//                Matrix matrix = new Matrix();
-//                matrix.postRotate(270);
-//                imageBitmap = Bitmap.createBitmap(imageBitmap, 0, 0, w, h, matrix, true);
-
-                //captureImageView.setImageBitmap(imageBitmap);
                 detectFace();
-                captureImageView.setRotationX(90);
             }
-        };
-
-        cameraView.getCamera().takePicture(shutterCallback, rawCallback, jpegCallback);
+        });
     }
 
     private void detectFace() {
@@ -238,11 +186,13 @@ public class MainActivity extends AppCompatActivity {
 
         for(int i=0; i<faces.size(); i++){
             Face thisFace = faces.valueAt(i);
+
             float x1 = thisFace.getPosition().x;
             float y1 = thisFace.getPosition().y;
             float x2 = x1 + thisFace.getWidth();
             float y2 = y1 + thisFace.getHeight();
-            tempCanvas.drawRoundRect(new RectF(x1,y1,x2,y2), 2, 2, myRectPaint);
+            RectF rect = new RectF(x1,y1,x2,y2);
+            tempCanvas.drawRoundRect(rect, 2, 2, myRectPaint);
 
             //draw landmarks
             List<Landmark> landmarks = thisFace.getLandmarks();
@@ -256,7 +206,21 @@ public class MainActivity extends AppCompatActivity {
                 float landy = thisLand.getPosition().y;
                 tempCanvas.drawCircle(landx, landy, 10, Pnt);
             }
+
+            Random r = new Random();
+            int selectedColor = COLOR_CHOICES[r.nextInt(7)];
+
+            paint.setColor(selectedColor);
+            paint.setTextSize(40);
+
+            tempCanvas.drawText("id: " + thisFace.getId(),
+                    rect.centerX(), rect.centerY(), paint);
         }
+
+        Matrix matrix = new Matrix();
+        matrix.postRotate(90);
+        tempBitmap = Bitmap.createBitmap(tempBitmap, 0, 0, tempBitmap.getWidth(),tempBitmap.getHeight(), matrix, true);
+
         captureImageView.setImageDrawable(new BitmapDrawable(getResources(), tempBitmap));
         faceDetector.release();
     }
